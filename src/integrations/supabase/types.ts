@@ -51,6 +51,42 @@ export type Database = {
         }
         Relationships: []
       }
+      prompts: {
+        Row: {
+          content: string
+          created_at: string
+          emoji: string | null
+          excerpt: string
+          id: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          emoji?: string | null
+          excerpt: string
+          id?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          emoji?: string | null
+          excerpt?: string
+          id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
