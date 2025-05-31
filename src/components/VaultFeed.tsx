@@ -1,6 +1,9 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import PromptCard from './PromptCard';
+import { useToast } from '@/hooks/use-toast';
 
 interface Prompt {
   id: string;
@@ -8,9 +11,14 @@ interface Prompt {
   emoji: string;
   excerpt: string;
   tags: string[];
-  date: string;
-  readTime?: string;
+  created_at: string;
+  updated_at: string;
   content: string;
+  user_id: string;
+  profiles?: {
+    username: string;
+    full_name: string;
+  };
 }
 
 interface VaultFeedProps {
@@ -20,15 +28,21 @@ interface VaultFeedProps {
 }
 
 const VaultFeed = ({ selectedTag, searchQuery, onPromptSelect }: VaultFeedProps) => {
-  const prompts: Prompt[] = [
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fallback prompts for when database is empty or user is not logged in
+  const fallbackPrompts: Prompt[] = [
     {
-      id: '1',
+      id: 'fallback-1',
       title: 'Laals UI Vision – Complete SaaS Design System',
       emoji: '🎨',
       excerpt: 'A comprehensive design system and product vision for Laals - my SaaS company. Includes UI patterns, color schemes, component library, and the complete product lineup with Supabase backend architecture.',
       tags: ['SaaS', 'UI', 'ProductVision', 'Design'],
-      date: 'Dec 15, 2024',
-      readTime: '8 min read',
+      created_at: 'Dec 15, 2024',
+      updated_at: 'Dec 15, 2024',
       content: `# Laals UI Vision – Complete SaaS Design System
 
 ## 🎯 Vision Statement
@@ -98,16 +112,17 @@ Team productivity suite
 - Component marketplace
 - API documentation portal
 
-This vision document serves as our north star for all design and development decisions.`
+This vision document serves as our north star for all design and development decisions.`,
+      user_id: 'fallback',
     },
     {
-      id: '2',
+      id: 'fallback-2',
       title: 'AI Prompt Engineering Masterclass',
       emoji: '🤖',
       excerpt: 'Advanced techniques for crafting effective AI prompts. Covers role-based prompting, chain-of-thought reasoning, and context optimization strategies.',
       tags: ['AI', 'Reference', 'Workflow'],
-      date: 'Dec 10, 2024',
-      readTime: '12 min read',
+      created_at: 'Dec 10, 2024',
+      updated_at: 'Dec 10, 2024',
       content: `# AI Prompt Engineering Masterclass
 
 ## 🎯 Core Principles
@@ -179,96 +194,46 @@ Analyze this scenario using:
 4. Success metrics
 \`\`\`
 
-This is my go-to reference for all AI interactions.`
-    },
-    {
-      id: '3',
-      title: 'Micro-SaaS Validation Framework',
-      emoji: '📊',
-      excerpt: 'A systematic approach to validating micro-SaaS ideas before building. Includes market research templates, competitor analysis, and MVP scoping strategies.',
-      tags: ['SaaS', 'ProductVision', 'Reference'],
-      date: 'Dec 5, 2024',
-      readTime: '15 min read',
-      content: `# Micro-SaaS Validation Framework
-
-## 🎯 Overview
-Before writing a single line of code, validate your SaaS idea systematically.
-
-## Phase 1: Problem Identification
-
-### Pain Point Research
-1. **Interview 10+ potential users**
-2. **Join relevant communities** (Reddit, Discord, Slack)
-3. **Analyze support tickets** of existing solutions
-4. **Monitor social media complaints**
-
-### Problem Statement Template
-"[TARGET AUDIENCE] struggles with [SPECIFIC PROBLEM] because [ROOT CAUSE], leading to [NEGATIVE OUTCOME]."
-
-## Phase 2: Market Analysis
-
-### Competitor Landscape
-Create a feature comparison matrix:
-- Direct competitors (same solution)
-- Indirect competitors (different approach, same outcome)
-- Adjacent solutions (partial overlap)
-
-### Pricing Research
-- Freemium vs paid models
-- Price point sensitivity testing
-- Value-based pricing considerations
-
-## Phase 3: Solution Design
-
-### MVP Scope
-Apply the "painkiller vs vitamin" test:
-- **Painkiller**: Solves urgent, painful problems
-- **Vitamin**: Nice-to-have improvements
-
-Focus exclusively on painkillers for MVP.
-
-### Feature Prioritization Matrix
-Plot features on:
-- **X-axis**: Implementation effort (1-10)
-- **Y-axis**: User value (1-10)
-- **Priority**: High value, low effort first
-
-## Phase 4: Validation Methods
-
-### 1. Landing Page Test
-- Create a compelling landing page
-- Drive traffic through ads
-- Measure signup/interest rates
-- Target: >15% conversion for B2B, >5% for B2C
-
-### 2. Pre-sales Validation
-- Offer "early access" pricing
-- Require payment for waitlist
-- Gauge willingness to pay
-
-### 3. Prototype Testing
-- Build clickable prototype
-- User testing sessions
-- Task completion rates
-- Qualitative feedback
-
-## Success Metrics
-
-### Validation Thresholds
-- **Problem interviews**: 80% confirm the problem exists
-- **Solution interviews**: 60% would use your solution
-- **Willingness to pay**: 40% would pay your target price
-- **Early access**: 100+ qualified signups
-
-## Red Flags to Avoid
-- ❌ "Everyone is my target market"
-- ❌ "No direct competitors" (usually means no market)
-- ❌ Building features before validating core value
-- ❌ Falling in love with your solution vs the problem
-
-This framework has saved me months of wasted development time.`
+This is my go-to reference for all AI interactions.`,
+      user_id: 'fallback',
     }
   ];
+
+  useEffect(() => {
+    fetchPrompts();
+  }, [user]);
+
+  const fetchPrompts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('prompts')
+        .select(`
+          *,
+          profiles (
+            username,
+            full_name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // If no prompts in database, use fallback prompts
+      setPrompts(data && data.length > 0 ? data : fallbackPrompts);
+    } catch (error) {
+      console.error('Error fetching prompts:', error);
+      // On error, use fallback prompts
+      setPrompts(fallbackPrompts);
+      if (user) {
+        toast({
+          title: "Notice",
+          description: "Using sample prompts. Database connection needed for full functionality.",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredPrompts = useMemo(() => {
     return prompts.filter(prompt => {
@@ -280,7 +245,20 @@ This framework has saved me months of wasted development time.`
       
       return matchesTag && matchesSearch;
     });
-  }, [selectedTag, searchQuery]);
+  }, [prompts, selectedTag, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-6 py-8">
+        <div className="text-center py-12">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <span className="text-white font-bold text-sm">O</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">Loading prompts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -298,8 +276,8 @@ This framework has saved me months of wasted development time.`
               emoji={prompt.emoji}
               excerpt={prompt.excerpt}
               tags={prompt.tags}
-              date={prompt.date}
-              readTime={prompt.readTime}
+              date={new Date(prompt.created_at).toLocaleDateString()}
+              readTime={`${Math.ceil(prompt.content.length / 1000)} min read`}
               onClick={() => onPromptSelect(prompt)}
             />
           </div>

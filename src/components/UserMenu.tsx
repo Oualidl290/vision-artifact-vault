@@ -13,16 +13,23 @@ import {
 } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Settings, LogOut, Plus } from 'lucide-react';
+import { User, Settings, LogOut, Plus, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const UserMenu = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   if (!user) return null;
 
   const handleSignOut = async () => {
     await signOut();
+    setOpen(false);
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
     setOpen(false);
   };
 
@@ -49,14 +56,18 @@ const UserMenu = () => {
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup heading="Actions">
-              <CommandItem>
+              <CommandItem onSelect={() => handleNavigate('/create-prompt')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>New Prompt</span>
+              </CommandItem>
+              <CommandItem onSelect={() => handleNavigate('/my-prompts')}>
+                <FileText className="mr-2 h-4 w-4" />
+                <span>My Prompts</span>
               </CommandItem>
             </CommandGroup>
             <CommandSeparator />
             <CommandGroup heading="Account">
-              <CommandItem>
+              <CommandItem onSelect={() => handleNavigate('/profile')}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </CommandItem>

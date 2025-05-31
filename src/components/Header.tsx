@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Home, User, Github, LogIn } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, Home, User, Github, LogIn, Plus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import UserMenu from './UserMenu';
 
@@ -22,6 +22,7 @@ const Header = ({
   onSearchChange
 }: HeaderProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const tags = ['SaaS', 'UI', 'AI', 'Reference', 'ProductVision', 'Workflow'];
 
   return (
@@ -29,24 +30,30 @@ const Header = ({
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">O</span>
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                 Creative Vault
               </h1>
-            </div>
+            </Link>
             
             <nav className="hidden md:flex items-center space-x-6">
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                <Home className="w-4 h-4" />
-                <span>Vault</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                <User className="w-4 h-4" />
-                <span>About</span>
-              </Button>
+              <Link to="/">
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <Home className="w-4 h-4" />
+                  <span>Vault</span>
+                </Button>
+              </Link>
+              {user && (
+                <Link to="/my-prompts">
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span>My Prompts</span>
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -66,7 +73,17 @@ const Header = ({
             </Button>
 
             {user ? (
-              <UserMenu />
+              <>
+                <Button
+                  onClick={() => navigate('/create-prompt')}
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">New Prompt</span>
+                </Button>
+                <UserMenu />
+              </>
             ) : (
               <Link to="/auth">
                 <Button size="sm" className="flex items-center space-x-2">
