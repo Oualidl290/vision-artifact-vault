@@ -15,10 +15,6 @@ interface Prompt {
   updated_at: string;
   content: string;
   user_id: string;
-  profiles?: {
-    username: string;
-    full_name: string;
-  };
 }
 
 interface VaultFeedProps {
@@ -207,13 +203,7 @@ This is my go-to reference for all AI interactions.`,
     try {
       const { data, error } = await supabase
         .from('prompts')
-        .select(`
-          *,
-          profiles (
-            username,
-            full_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

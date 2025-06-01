@@ -12,9 +12,10 @@ interface Prompt {
   emoji: string;
   excerpt: string;
   tags: string[];
-  date: string;
-  readTime?: string;
+  created_at: string;
+  updated_at: string;
   content: string;
+  user_id: string;
 }
 
 const Index = () => {
