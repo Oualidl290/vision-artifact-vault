@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +28,6 @@ const VaultFeed = ({ selectedTag, searchQuery, onPromptSelect }: VaultFeedProps)
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fallback prompts for when database is empty or user is not logged in
   const fallbackPrompts: Prompt[] = [
     {
       id: 'fallback-1',

@@ -30,7 +30,7 @@ const Header = ({
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <Link to="/" className="flex items-center space-x-3">
+            <Link to="/vault" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">O</span>
               </div>
@@ -40,7 +40,7 @@ const Header = ({
             </Link>
             
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/">
+              <Link to="/vault">
                 <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                   <Home className="w-4 h-4" />
                   <span>Vault</span>
@@ -75,12 +75,12 @@ const Header = ({
             {user ? (
               <>
                 <Button
-                  onClick={() => navigate('/create-prompt')}
+                  onClick={() => navigate('/create-document')}
                   size="sm"
                   className="flex items-center space-x-2"
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">New Prompt</span>
+                  <span className="hidden sm:inline">New Document</span>
                 </Button>
                 <UserMenu />
               </>
