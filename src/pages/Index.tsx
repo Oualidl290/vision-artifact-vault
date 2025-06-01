@@ -55,9 +55,16 @@ const Index = () => {
   }
 
   if (selectedPrompt) {
+    // Convert the prompt to match PromptViewer's expected format
+    const promptForViewer = {
+      ...selectedPrompt,
+      date: new Date(selectedPrompt.created_at).toLocaleDateString(),
+      readTime: `${Math.ceil(selectedPrompt.content.length / 1000)} min read`
+    };
+
     return (
       <PromptViewer
-        prompt={selectedPrompt}
+        prompt={promptForViewer}
         onBack={handleBackToVault}
       />
     );
