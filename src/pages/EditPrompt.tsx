@@ -5,10 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Plus, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Prompt {
@@ -22,29 +22,32 @@ interface Prompt {
 }
 
 const EditPrompt = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [prompt, setPrompt] = useState<Prompt | null>(null);
-  
-  const [formData, setFormData] = useState({
-    title: '',
-    emoji: '📝',
-    excerpt: '',
-    content: '',
-    tags: [] as string[],
-  });
-  
+  const [title, setTitle] = useState('');
+  const [emoji, setEmoji] = useState('📄');
+  const [excerpt, setExcerpt] = useState('');
+  const [content, setContent] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (id && user) {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    if (id) {
       fetchPrompt();
     }
-  }, [id, user]);
+  }, [id, user, navigate]);
 
   const fetchPrompt = async () => {
     if (!id || !user) return;
@@ -57,16 +60,25 @@ const EditPrompt = () => {
         .eq('user_id', user.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          toast({
+            title: "Not found",
+            description: "Prompt not found or you don't have permission to edit it.",
+            variant: "destructive",
+          });
+          navigate('/my-prompts');
+          return;
+        }
+        throw error;
+      }
 
       setPrompt(data);
-      setFormData({
-        title: data.title,
-        emoji: data.emoji,
-        excerpt: data.excerpt,
-        content: data.content,
-        tags: data.tags || [],
-      });
+      setTitle(data.title);
+      setEmoji(data.emoji || '📄');
+      setExcerpt(data.excerpt);
+      setContent(data.content);
+      setTags(data.tags || []);
     } catch (error) {
       console.error('Error fetching prompt:', error);
       toast({
@@ -74,45 +86,51 @@ const EditPrompt = () => {
         description: "Failed to load prompt. Please try again.",
         variant: "destructive",
       });
-      navigate('/');
+      navigate('/my-prompts');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
+  const addTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
       setNewTag('');
     }
   };
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !id) return;
-
-    setIsLoading(true);
     
+    if (!user || !prompt) return;
+
+    if (!title.trim() || !excerpt.trim() || !content.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
       const { error } = await supabase
         .from('prompts')
         .update({
-          title: formData.title,
-          emoji: formData.emoji,
-          excerpt: formData.excerpt,
-          content: formData.content,
-          tags: formData.tags,
+          title: title.trim(),
+          emoji: emoji || '📄',
+          excerpt: excerpt.trim(),
+          content: content.trim(),
+          tags,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq('id', prompt.id)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -122,7 +140,7 @@ const EditPrompt = () => {
         description: "Prompt updated successfully!",
       });
 
-      navigate('/');
+      navigate('/my-prompts');
     } catch (error) {
       console.error('Error updating prompt:', error);
       toast({
@@ -131,20 +149,24 @@ const EditPrompt = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!user || !id || !confirm('Are you sure you want to delete this prompt?')) return;
+    if (!user || !prompt) return;
+
+    if (!confirm(`Are you sure you want to delete "${prompt.title}"? This action cannot be undone.`)) {
+      return;
+    }
 
     setIsDeleting(true);
-    
+
     try {
       const { error } = await supabase
         .from('prompts')
         .delete()
-        .eq('id', id)
+        .eq('id', prompt.id)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -154,7 +176,7 @@ const EditPrompt = () => {
         description: "Prompt deleted successfully!",
       });
 
-      navigate('/');
+      navigate('/my-prompts');
     } catch (error) {
       console.error('Error deleting prompt:', error);
       toast({
@@ -170,19 +192,15 @@ const EditPrompt = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Please sign in to edit prompts.</p>
-            <Button onClick={() => navigate('/auth')} className="mt-4">
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to edit prompts.</p>
+          <Button onClick={() => navigate('/auth')}>Sign In</Button>
+        </div>
       </div>
     );
   }
 
-  if (!prompt) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
@@ -197,60 +215,61 @@ const EditPrompt = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <header className="sticky top-0 z-50 w-full border-b glass glass-dark">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Vault</span>
-              </Button>
-              <h1 className="text-xl font-bold">Edit Prompt</h1>
-            </div>
+      <div className="container mx-auto px-6 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
             <Button
-              variant="destructive"
+              variant="ghost"
               size="sm"
-              onClick={handleDelete}
-              disabled={isDeleting}
+              onClick={() => navigate('/my-prompts')}
               className="flex items-center space-x-2"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to My Prompts</span>
             </Button>
+            <h1 className="text-2xl font-bold">Edit Prompt</h1>
           </div>
+          
+          <Button
+            onClick={handleDelete}
+            variant="outline"
+            size="sm"
+            disabled={isDeleting}
+            className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+          >
+            {isDeleting ? (
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </>
+            )}
+          </Button>
         </div>
-      </header>
 
-      <main className="container mx-auto px-6 py-8 max-w-4xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit Prompt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6">
+          <Card className="glass glass-dark">
+            <CardHeader>
+              <CardTitle>Prompt Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="emoji">Emoji</Label>
+                  <label className="block text-sm font-medium mb-2">Emoji</label>
                   <Input
-                    id="emoji"
-                    value={formData.emoji}
-                    onChange={(e) => setFormData(prev => ({ ...prev, emoji: e.target.value }))}
-                    placeholder="📝"
+                    value={emoji}
+                    onChange={(e) => setEmoji(e.target.value)}
+                    placeholder="📄"
                     className="text-center text-2xl"
                     maxLength={2}
                   />
                 </div>
                 <div className="md:col-span-3">
-                  <Label htmlFor="title">Title</Label>
+                  <label className="block text-sm font-medium mb-2">Title *</label>
                   <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter prompt title..."
                     required
                   />
@@ -258,73 +277,97 @@ const EditPrompt = () => {
               </div>
 
               <div>
-                <Label htmlFor="excerpt">Excerpt</Label>
-                <Input
-                  id="excerpt"
-                  value={formData.excerpt}
-                  onChange={(e) => setFormData(prev => ({ ...prev, excerpt: e.target.value }))}
+                <label className="block text-sm font-medium mb-2">Excerpt *</label>
+                <Textarea
+                  value={excerpt}
+                  onChange={(e) => setExcerpt(e.target.value)}
                   placeholder="Brief description of your prompt..."
+                  rows={3}
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="content">Content</Label>
-                <textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write your detailed prompt content here..."
-                  className="w-full min-h-[200px] p-3 border border-input rounded-md bg-background"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>Tags</Label>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Add a tag..."
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                  />
-                  <Button type="button" onClick={handleAddTag} size="sm">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center space-x-1">
+                <label className="block text-sm font-medium mb-2">Tags</label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="flex items-center space-x-1"
+                    >
                       <span>#{tag}</span>
                       <button
                         type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-red-500"
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 text-xs hover:text-red-500"
                       >
                         <X className="w-3 h-3" />
                       </button>
                     </Badge>
                   ))}
                 </div>
+                <div className="flex space-x-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    placeholder="Add a tag..."
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addTag}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="flex justify-end space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Updating...' : 'Update Prompt'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
+          <Card className="glass glass-dark">
+            <CardHeader>
+              <CardTitle>Content</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your prompt content here..."
+                rows={20}
+                className="font-mono"
+                required
+              />
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/my-prompts')}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="flex items-center space-x-2"
+            >
+              {isSaving ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

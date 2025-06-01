@@ -5,44 +5,46 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, User, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface ProfileData {
-  username: string;
-  full_name: string;
-  bio: string;
-  website: string;
-  github_url: string;
-  twitter_url: string;
-  linkedin_url: string;
-  avatar_url: string;
+interface Profile {
+  id: string;
+  full_name: string | null;
+  username: string | null;
+  bio: string | null;
+  website: string | null;
+  twitter_url: string | null;
+  linkedin_url: string | null;
+  github_url: string | null;
 }
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [profile, setProfile] = useState<ProfileData>({
-    username: '',
-    full_name: '',
-    bio: '',
-    website: '',
-    github_url: '',
-    twitter_url: '',
-    linkedin_url: '',
-    avatar_url: '',
-  });
+  
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [website, setWebsite] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchProfile();
+    if (!user) {
+      navigate('/auth');
+      return;
     }
-  }, [user]);
+    
+    fetchProfile();
+  }, [user, navigate]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -54,19 +56,19 @@ const Profile = () => {
         .eq('id', user.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
       if (data) {
-        setProfile({
-          username: data.username || '',
-          full_name: data.full_name || '',
-          bio: data.bio || '',
-          website: data.website || '',
-          github_url: data.github_url || '',
-          twitter_url: data.twitter_url || '',
-          linkedin_url: data.linkedin_url || '',
-          avatar_url: data.avatar_url || '',
-        });
+        setProfile(data);
+        setFullName(data.full_name || '');
+        setUsername(data.username || '');
+        setBio(data.bio || '');
+        setWebsite(data.website || '');
+        setTwitterUrl(data.twitter_url || '');
+        setLinkedinUrl(data.linkedin_url || '');
+        setGithubUrl(data.github_url || '');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -75,23 +77,34 @@ const Profile = () => {
         description: "Failed to load profile. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!user) return;
 
-    setIsLoading(true);
+    setIsSaving(true);
 
     try {
+      const profileData = {
+        id: user.id,
+        full_name: fullName.trim() || null,
+        username: username.trim() || null,
+        bio: bio.trim() || null,
+        website: website.trim() || null,
+        twitter_url: twitterUrl.trim() || null,
+        linkedin_url: linkedinUrl.trim() || null,
+        github_url: githubUrl.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          ...profile,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(profileData);
 
       if (error) throw error;
 
@@ -99,6 +112,8 @@ const Profile = () => {
         title: "Success",
         description: "Profile updated successfully!",
       });
+
+      setProfile(profileData);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -107,167 +122,215 @@ const Profile = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const handleInputChange = (field: keyof ProfileData, value: string) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Please sign in to view your profile.</p>
-            <Button onClick={() => navigate('/auth')} className="mt-4">
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to view your profile.</p>
+          <Button onClick={() => navigate('/auth')}>Sign In</Button>
+        </div>
       </div>
     );
   }
 
-  const userInitials = profile.full_name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase() || user.email?.[0]?.toUpperCase() || 'U';
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <span className="text-white font-bold text-sm">O</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      <header className="sticky top-0 z-50 w-full border-b glass glass-dark">
-        <div className="container mx-auto px-6 py-4">
+      <div className="container mx-auto px-6 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/vault')}
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Vault</span>
             </Button>
-            <h1 className="text-xl font-bold">Profile Settings</h1>
+            <h1 className="text-2xl font-bold">Profile Settings</h1>
           </div>
+          
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            className="flex items-center space-x-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </Button>
         </div>
-      </header>
 
-      <main className="container mx-auto px-6 py-8 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-4">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={profile.avatar_url} />
-                <AvatarFallback>{userInitials}</AvatarFallback>
-              </Avatar>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass glass-dark">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="w-5 h-5" />
+                <span>Account Info</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h2 className="text-xl font-bold">Profile Settings</h2>
-                <p className="text-muted-foreground">{user.email}</p>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={profile.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    placeholder="Your username"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    value={profile.full_name}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
-                    placeholder="Your full name"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="bio">Bio</Label>
-                <textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => handleInputChange('bio', e.target.value)}
-                  placeholder="Tell us about yourself..."
-                  className="w-full min-h-[100px] p-3 border border-input rounded-md bg-background"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="website">Website</Label>
+                <label className="block text-sm font-medium mb-2">Email</label>
                 <Input
-                  id="website"
-                  type="url"
-                  value={profile.website}
-                  onChange={(e) => handleInputChange('website', e.target.value)}
-                  placeholder="https://yourwebsite.com"
+                  value={user.email || ''}
+                  disabled
+                  className="bg-gray-100 dark:bg-gray-800"
                 />
+                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="github_url">GitHub URL</Label>
-                  <Input
-                    id="github_url"
-                    type="url"
-                    value={profile.github_url}
-                    onChange={(e) => handleInputChange('github_url', e.target.value)}
-                    placeholder="https://github.com/username"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="twitter_url">Twitter URL</Label>
-                  <Input
-                    id="twitter_url"
-                    type="url"
-                    value={profile.twitter_url}
-                    onChange={(e) => handleInputChange('twitter_url', e.target.value)}
-                    placeholder="https://twitter.com/username"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="linkedin_url">LinkedIn URL</Label>
-                  <Input
-                    id="linkedin_url"
-                    type="url"
-                    value={profile.linkedin_url}
-                    onChange={(e) => handleInputChange('linkedin_url', e.target.value)}
-                    placeholder="https://linkedin.com/in/username"
-                  />
-                </div>
-              </div>
-
+              
               <div>
-                <Label htmlFor="avatar_url">Avatar URL</Label>
+                <label className="block text-sm font-medium mb-2">Member Since</label>
                 <Input
-                  id="avatar_url"
-                  type="url"
-                  value={profile.avatar_url}
-                  onChange={(e) => handleInputChange('avatar_url', e.target.value)}
-                  placeholder="https://example.com/avatar.jpg"
+                  value={new Date(user.created_at).toLocaleDateString()}
+                  disabled
+                  className="bg-gray-100 dark:bg-gray-800"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <div className="md:col-span-2">
+            <form onSubmit={handleSave} className="space-y-6">
+              <Card className="glass glass-dark">
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Full Name</label>
+                      <Input
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Username</label>
+                      <Input
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Enter your username"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bio</label>
+                    <Textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Tell us about yourself..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Website</label>
+                    <Input
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="https://your-website.com"
+                      type="url"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass glass-dark">
+                <CardHeader>
+                  <CardTitle>Social Links</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Twitter</label>
+                    <Input
+                      value={twitterUrl}
+                      onChange={(e) => setTwitterUrl(e.target.value)}
+                      placeholder="https://twitter.com/username"
+                      type="url"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">LinkedIn</label>
+                    <Input
+                      value={linkedinUrl}
+                      onChange={(e) => setLinkedinUrl(e.target.value)}
+                      placeholder="https://linkedin.com/in/username"
+                      type="url"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">GitHub</label>
+                    <Input
+                      value={githubUrl}
+                      onChange={(e) => setGithubUrl(e.target.value)}
+                      placeholder="https://github.com/username"
+                      type="url"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
               <div className="flex justify-end">
-                <Button type="submit" disabled={isLoading} className="flex items-center space-x-2">
-                  <Save className="w-4 h-4" />
-                  <span>{isLoading ? 'Saving...' : 'Save Profile'}</span>
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex items-center space-x-2"
+                >
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
