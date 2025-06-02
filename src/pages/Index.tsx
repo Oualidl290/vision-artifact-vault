@@ -19,19 +19,19 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-white font-bold text-sm">CV</span>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-pulse shadow-lg">
+            <span className="text-white font-bold text-lg">CV</span>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-slate-600 dark:text-slate-400 text-lg">Loading vault...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
       <Header
         selectedTag={selectedTag}
         onTagSelect={handleTagSelect}
@@ -39,11 +39,11 @@ const Index = () => {
         onSearchChange={handleSearchChange}
       />
       
-      <main className="fade-in">
+      <main className="animate-fade-in">
         <VaultFeed
           selectedTag={selectedTag}
           searchQuery={searchQuery}
-          onPromptSelect={() => {}} // No longer needed as we navigate via URL
+          onPromptSelect={() => {}}
         />
       </main>
     </div>
