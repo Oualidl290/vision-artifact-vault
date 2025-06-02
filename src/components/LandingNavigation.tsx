@@ -24,7 +24,7 @@ const LandingNavigation = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center bg-gray-900">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center bg-[#1c0430]">
               <span className="text-3xl font-extrabold text-amber-300">L</span>
             </div>
             <span className="font-bold text-xl text-[#410792]">Vault</span>
