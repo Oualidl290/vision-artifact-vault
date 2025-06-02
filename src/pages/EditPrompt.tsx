@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Plus, X, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, X, Save, Upload, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Prompt {
@@ -18,11 +18,13 @@ interface Prompt {
   excerpt: string;
   content: string;
   tags: string[];
+  created_at: string;
+  updated_at: string;
   user_id: string;
 }
 
 const EditPrompt = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,43 +37,28 @@ const EditPrompt = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    
-    if (id) {
+    if (id && user) {
       fetchPrompt();
     }
-  }, [id, user, navigate]);
+  }, [id, user]);
 
   const fetchPrompt = async () => {
-    if (!id || !user) return;
+    if (!id) return;
 
     try {
       const { data, error } = await supabase
         .from('prompts')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          toast({
-            title: "Not found",
-            description: "Prompt not found or you don't have permission to edit it.",
-            variant: "destructive",
-          });
-          navigate('/my-prompts');
-          return;
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       setPrompt(data);
       setTitle(data.title);
@@ -83,12 +70,67 @@ const EditPrompt = () => {
       console.error('Error fetching prompt:', error);
       toast({
         title: "Error",
-        description: "Failed to load prompt. Please try again.",
+        description: "Failed to load the document. Please try again.",
         variant: "destructive",
       });
       navigate('/my-prompts');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    const allowedTypes = ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload PDF, TXT, DOC, or DOCX files only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload files smaller than 10MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    setIsProcessingFile(true);
+
+    try {
+      await processFile(file);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast({
+        title: "Error processing file",
+        description: "Could not extract content from the file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingFile(false);
+    }
+  };
+
+  const processFile = async (file: File) => {
+    if (file.type === 'text/plain') {
+      const text = await file.text();
+      setContent(text);
+    } else if (file.type === 'application/pdf') {
+      // For PDF files, we'll store the file and show a message
+      setContent(`PDF file uploaded: ${file.name}\n\nTo view the full content, the PDF would need to be processed by a PDF parser.`);
+    } else {
+      // For other file types
+      setContent(`Document uploaded: ${file.name}\n\nFile type: ${file.type}`);
     }
   };
 
@@ -103,10 +145,17 @@ const EditPrompt = () => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !prompt) return;
+    if (!user || !id) {
+      toast({
+        title: "Error",
+        description: "Authentication required.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!title.trim() || !excerpt.trim() || !content.trim()) {
       toast({
@@ -117,7 +166,7 @@ const EditPrompt = () => {
       return;
     }
 
-    setIsSaving(true);
+    setIsSubmitting(true);
 
     try {
       const { error } = await supabase
@@ -130,84 +179,54 @@ const EditPrompt = () => {
           tags,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', prompt.id)
+        .eq('id', id)
         .eq('user_id', user.id);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Prompt updated successfully!",
+        title: "Document updated",
+        description: "Your document has been successfully updated.",
       });
 
       navigate('/my-prompts');
     } catch (error) {
-      console.error('Error updating prompt:', error);
+      console.error('Error updating document:', error);
       toast({
         title: "Error",
-        description: "Failed to update prompt. Please try again.",
+        description: "Failed to update document. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
-
-  const handleDelete = async () => {
-    if (!user || !prompt) return;
-
-    if (!confirm(`Are you sure you want to delete "${prompt.title}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const { error } = await supabase
-        .from('prompts')
-        .delete()
-        .eq('id', prompt.id)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Prompt deleted successfully!",
-      });
-
-      navigate('/my-prompts');
-    } catch (error) {
-      console.error('Error deleting prompt:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete prompt. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to edit prompts.</p>
-          <Button onClick={() => navigate('/auth')}>Sign In</Button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-white font-bold text-sm">O</span>
+            <span className="text-white font-bold text-sm">CV</span>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">Loading prompt...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading document...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!prompt) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📄</div>
+          <h3 className="text-lg font-semibold mb-2">Document not found</h3>
+          <p className="text-muted-foreground mb-4">
+            The document you're looking for doesn't exist or you don't have permission to edit it.
+          </p>
+          <Button onClick={() => navigate('/my-prompts')}>
+            Back to My Documents
+          </Button>
         </div>
       </div>
     );
@@ -216,42 +235,68 @@ const EditPrompt = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/my-prompts')}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to My Prompts</span>
-            </Button>
-            <h1 className="text-2xl font-bold">Edit Prompt</h1>
-          </div>
-          
+        <div className="flex items-center space-x-4 mb-8">
           <Button
-            onClick={handleDelete}
-            variant="outline"
+            variant="ghost"
             size="sm"
-            disabled={isDeleting}
-            className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+            onClick={() => navigate('/my-prompts')}
+            className="flex items-center space-x-2"
           >
-            {isDeleting ? (
-              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </>
-            )}
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to My Documents</span>
           </Button>
+          <h1 className="text-2xl font-bold">Edit Document</h1>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* File Upload Section */}
           <Card className="glass glass-dark">
             <CardHeader>
-              <CardTitle>Prompt Details</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Upload className="w-5 h-5" />
+                <span>Replace Document</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.doc,.docx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="file-upload"
+                  disabled={isProcessingFile}
+                />
+                <label 
+                  htmlFor="file-upload" 
+                  className="cursor-pointer flex flex-col items-center space-y-4"
+                >
+                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium">
+                      {isProcessingFile ? 'Processing file...' : 'Click to upload a new document'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Supports PDF, TXT, DOC, DOCX files up to 10MB
+                    </p>
+                  </div>
+                </label>
+                {selectedFile && (
+                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      ✓ {selectedFile.name} uploaded successfully
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass glass-dark">
+            <CardHeader>
+              <CardTitle>Document Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -270,7 +315,7 @@ const EditPrompt = () => {
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter prompt title..."
+                    placeholder="Enter document title..."
                     required
                   />
                 </div>
@@ -281,7 +326,7 @@ const EditPrompt = () => {
                 <Textarea
                   value={excerpt}
                   onChange={(e) => setExcerpt(e.target.value)}
-                  placeholder="Brief description of your prompt..."
+                  placeholder="Brief description of your document..."
                   rows={3}
                   required
                 />
@@ -335,7 +380,7 @@ const EditPrompt = () => {
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your prompt content here..."
+                placeholder="Document content..."
                 rows={20}
                 className="font-mono"
                 required
@@ -353,17 +398,11 @@ const EditPrompt = () => {
             </Button>
             <Button
               type="submit"
-              disabled={isSaving}
+              disabled={isSubmitting || isProcessingFile}
               className="flex items-center space-x-2"
             >
-              {isSaving ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
-                </>
-              )}
+              <Save className="w-4 h-4" />
+              <span>{isSubmitting ? 'Saving...' : 'Save Changes'}</span>
             </Button>
           </div>
         </form>

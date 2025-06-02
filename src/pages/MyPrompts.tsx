@@ -7,8 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Edit, Trash2, Eye, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Prompt {
   id: string;
@@ -51,7 +62,7 @@ const MyPrompts = () => {
       console.error('Error fetching prompts:', error);
       toast({
         title: "Error",
-        description: "Failed to load your prompts. Please try again.",
+        description: "Failed to load your documents. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -59,9 +70,7 @@ const MyPrompts = () => {
     }
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) return;
-
+  const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
         .from('prompts')
@@ -74,16 +83,42 @@ const MyPrompts = () => {
       setPrompts(prev => prev.filter(p => p.id !== id));
       toast({
         title: "Success",
-        description: "Prompt deleted successfully!",
+        description: "Document deleted successfully!",
       });
     } catch (error) {
-      console.error('Error deleting prompt:', error);
+      console.error('Error deleting document:', error);
       toast({
         title: "Error",
-        description: "Failed to delete prompt. Please try again.",
+        description: "Failed to delete document. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleView = (id: string) => {
+    navigate(`/vault/${id}`);
+  };
+
+  const handleEdit = (id: string) => {
+    navigate(`/edit-prompt/${id}`);
+  };
+
+  const handleDownload = (prompt: Prompt) => {
+    const content = `Title: ${prompt.title}\n\nExcerpt: ${prompt.excerpt}\n\nTags: ${prompt.tags.join(', ')}\n\nContent:\n${prompt.content}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${prompt.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Download started",
+      description: "Your document is being downloaded as a text file.",
+    });
   };
 
   const filteredPrompts = prompts.filter(prompt =>
@@ -97,7 +132,7 @@ const MyPrompts = () => {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center">
         <Card className="w-96">
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Please sign in to view your prompts.</p>
+            <p className="text-muted-foreground">Please sign in to view your documents.</p>
             <Button onClick={() => navigate('/auth')} className="mt-4">
               Sign In
             </Button>
@@ -116,20 +151,20 @@ const MyPrompts = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/vault')}
                 className="flex items-center space-x-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Vault</span>
               </Button>
-              <h1 className="text-xl font-bold">My Prompts</h1>
+              <h1 className="text-xl font-bold">My Documents</h1>
             </div>
             <Button
-              onClick={() => navigate('/create-prompt')}
+              onClick={() => navigate('/create-document')}
               className="flex items-center space-x-2"
             >
               <Plus className="w-4 h-4" />
-              <span>New Prompt</span>
+              <span>New Document</span>
             </Button>
           </div>
           
@@ -137,7 +172,7 @@ const MyPrompts = () => {
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search your prompts..."
+                placeholder="Search your documents..."
                 className="pl-10 glass glass-dark"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -151,25 +186,25 @@ const MyPrompts = () => {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <span className="text-white font-bold text-sm">O</span>
+              <span className="text-white font-bold text-sm">CV</span>
             </div>
-            <p className="text-gray-600 dark:text-gray-400">Loading your prompts...</p>
+            <p className="text-gray-600 dark:text-gray-400">Loading your documents...</p>
           </div>
         ) : filteredPrompts.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">📝</div>
+            <div className="text-4xl mb-4">📄</div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? 'No prompts found' : 'No prompts yet'}
+              {searchQuery ? 'No documents found' : 'No documents yet'}
             </h3>
             <p className="text-muted-foreground mb-4">
               {searchQuery 
                 ? 'Try adjusting your search criteria'
-                : 'Create your first prompt to get started'
+                : 'Create your first document to get started'
               }
             </p>
             {!searchQuery && (
-              <Button onClick={() => navigate('/create-prompt')}>
-                Create Your First Prompt
+              <Button onClick={() => navigate('/create-document')}>
+                Create Your First Document
               </Button>
             )}
           </div>
@@ -191,8 +226,20 @@ const MyPrompts = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/edit-prompt/${prompt.id}`);
+                          handleView(prompt.id);
                         }}
+                        title="View document"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(prompt.id);
+                        }}
+                        title="Edit document"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -201,12 +248,42 @@ const MyPrompts = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(prompt.id, prompt.title);
+                          handleDownload(prompt);
                         }}
-                        className="text-red-500 hover:text-red-700"
+                        title="Download document"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Download className="w-4 h-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-red-500 hover:text-red-700"
+                            title="Delete document"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{prompt.title}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(prompt.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </CardHeader>
