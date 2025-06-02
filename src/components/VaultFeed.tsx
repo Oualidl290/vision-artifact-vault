@@ -1,4 +1,6 @@
+
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import PromptCard from './PromptCard';
@@ -25,6 +27,7 @@ interface VaultFeedProps {
 const VaultFeed = ({ selectedTag, searchQuery, onPromptSelect }: VaultFeedProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -235,6 +238,10 @@ This is my go-to reference for all AI interactions.`,
     });
   }, [prompts, selectedTag, searchQuery]);
 
+  const handlePromptClick = (prompt: Prompt) => {
+    navigate(`/vault/${prompt.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-6 py-8">
@@ -256,7 +263,7 @@ This is my go-to reference for all AI interactions.`,
             key={prompt.id}
             className="animate-fade-in"
             style={{ animationDelay: `${index * 0.1}s` }}
-            onClick={() => onPromptSelect(prompt)}
+            onClick={() => handlePromptClick(prompt)}
           >
             <PromptCard
               id={prompt.id}
@@ -266,7 +273,7 @@ This is my go-to reference for all AI interactions.`,
               tags={prompt.tags}
               date={new Date(prompt.created_at).toLocaleDateString()}
               readTime={`${Math.ceil(prompt.content.length / 1000)} min read`}
-              onClick={() => onPromptSelect(prompt)}
+              onClick={() => handlePromptClick(prompt)}
             />
           </div>
         ))}
