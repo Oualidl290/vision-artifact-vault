@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -198,7 +197,7 @@ This is my go-to reference for all AI interactions.`,
 
   useEffect(() => {
     fetchPrompts();
-  }, [user]);
+  }, []);
 
   const fetchPrompts = async () => {
     try {
@@ -215,12 +214,10 @@ This is my go-to reference for all AI interactions.`,
       console.error('Error fetching prompts:', error);
       // On error, use fallback prompts
       setPrompts(fallbackPrompts);
-      if (user) {
-        toast({
-          title: "Notice",
-          description: "Using sample prompts. Database connection needed for full functionality.",
-        });
-      }
+      toast({
+        title: "Notice",
+        description: "Using sample documents. Database connection needed for full functionality.",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -29,16 +29,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<ModernLanding />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/vault" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/vault/:documentId" element={
-              <ProtectedRoute>
-                <DocumentView />
-              </ProtectedRoute>
-            } />
+            <Route path="/vault" element={<Index />} />
+            <Route path="/vault/:documentId" element={<DocumentView />} />
             <Route path="/create-prompt" element={
               <ProtectedRoute>
                 <CreatePrompt />

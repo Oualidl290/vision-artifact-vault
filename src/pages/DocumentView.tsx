@@ -27,10 +27,10 @@ const DocumentView = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (documentId && user) {
+    if (documentId) {
       fetchDocument();
     }
-  }, [documentId, user]);
+  }, [documentId]);
 
   const fetchDocument = async () => {
     if (!documentId) return;
@@ -46,7 +46,7 @@ const DocumentView = () => {
         if (error.code === 'PGRST116') {
           toast({
             title: "Document not found",
-            description: "The document you're looking for doesn't exist or you don't have access to it.",
+            description: "The document you're looking for doesn't exist.",
             variant: "destructive",
           });
           navigate('/vault');
@@ -93,7 +93,7 @@ const DocumentView = () => {
           <div className="text-4xl mb-4">📄</div>
           <h3 className="text-lg font-semibold mb-2">Document not found</h3>
           <p className="text-muted-foreground mb-4">
-            The document you're looking for doesn't exist or you don't have access to it.
+            The document you're looking for doesn't exist.
           </p>
           <button
             onClick={handleBackToVault}
