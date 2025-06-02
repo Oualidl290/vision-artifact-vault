@@ -13,7 +13,7 @@ import EditPrompt from "./pages/EditPrompt";
 import MyPrompts from "./pages/MyPrompts";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import LandingPage from "./components/LandingPage";
+import ModernLanding from "./pages/ModernLanding";
 
 const queryClient = new QueryClient();
 
@@ -25,7 +25,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<ModernLanding />} />
             <Route path="/vault" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/create-prompt" element={<CreatePrompt />} />
