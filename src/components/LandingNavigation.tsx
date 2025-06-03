@@ -1,25 +1,30 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, Github, Twitter, Linkedin, Instagram } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import UserMenu from './UserMenu';
+
 const LandingNavigation = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const navItems = [{
-    name: 'Features',
-    href: '#features'
-  }, {
-    name: 'Examples',
-    href: '/vault'
-  }, {
-    name: 'Pricing',
-    href: '#pricing'
-  }];
-  return <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/20 dark:border-slate-800/20">
+  
+  const navItems = [
+    { name: 'Features', href: '#features' },
+    { name: 'Examples', href: '/vault' },
+    { name: 'Pricing', href: '#pricing' }
+  ];
+
+  const socialLinks = [
+    { icon: Github, href: 'https://github.com', label: 'GitHub' },
+    { icon: Twitter, href: 'https://twitter.com', label: 'X (Twitter)' },
+    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
+    { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' }
+  ];
+
+  return (
+    <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/20 dark:border-slate-800/20">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -32,21 +37,44 @@ const LandingNavigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navItems.map(item => <Link key={item.name} to={item.href} className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200">
+            {navItems.map(item => (
+              <Link 
+                key={item.name} 
+                to={item.href} 
+                className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200"
+              >
                 {item.name}
-              </Link>)}
+              </Link>
+            ))}
+            <div className="flex items-center space-x-4 ml-8">
+              {socialLinks.map(({ icon: Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors duration-200"
+                  aria-label={label}
+                >
+                  <Icon className="w-5 h-5" />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            {user ? <>
+            {user ? (
+              <>
                 <Link to="/vault">
                   <Button variant="ghost" size="sm">
                     My Vault
                   </Button>
                 </Link>
                 <UserMenu />
-              </> : <>
+              </>
+            ) : (
+              <>
                 <Link to="/vault">
                   <Button variant="ghost" size="sm">
                     Explore
@@ -58,28 +86,60 @@ const LandingNavigation = () => {
                     Sign In
                   </Button>
                 </Link>
-              </>}
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
-          <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="md:hidden" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
         </div>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && <div className="md:hidden border-t border-slate-200/20 dark:border-slate-800/20">
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-200/20 dark:border-slate-800/20">
             <div className="py-4 space-y-4">
-              {navItems.map(item => <Link key={item.name} to={item.href} className="block text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200" onClick={() => setIsMobileMenuOpen(false)}>
+              {navItems.map(item => (
+                <Link 
+                  key={item.name} 
+                  to={item.href} 
+                  className="block text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
                   {item.name}
-                </Link>)}
+                </Link>
+              ))}
+              
+              <div className="flex items-center space-x-6 pt-4">
+                {socialLinks.map(({ icon: Icon, href, label }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors duration-200"
+                    aria-label={label}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </a>
+                ))}
+              </div>
               
               <div className="pt-4 border-t border-slate-200/20 dark:border-slate-800/20">
-                {user ? <Link to="/vault" onClick={() => setIsMobileMenuOpen(false)}>
+                {user ? (
+                  <Link to="/vault" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button className="w-full">
                       Enter Vault
                     </Button>
-                  </Link> : <div className="space-y-2">
+                  </Link>
+                ) : (
+                  <div className="space-y-2">
                     <Link to="/vault" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full">
                         Explore Vault
@@ -90,11 +150,15 @@ const LandingNavigation = () => {
                         Sign In
                       </Button>
                     </Link>
-                  </div>}
+                  </div>
+                )}
               </div>
             </div>
-          </div>}
+          </div>
+        )}
       </div>
-    </nav>;
+    </nav>
+  );
 };
+
 export default LandingNavigation;
