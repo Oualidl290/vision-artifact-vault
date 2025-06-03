@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Menu, X, User, Github, Twitter, Linkedin, Instagram } from 'lucide-react';
@@ -17,10 +16,10 @@ const LandingNavigation = () => {
   ];
 
   const socialLinks = [
-    { icon: Github, href: 'https://github.com', label: 'GitHub' },
-    { icon: Twitter, href: 'https://twitter.com', label: 'X (Twitter)' },
-    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
-    { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' }
+    { icon: Github, href: 'https://github.com/Oualidl290/', label: 'GitHub' },
+    { icon: Twitter, href: 'https://x.com/Empty_Thron', label: 'X (Twitter)' },
+    { icon: Linkedin, href: 'https://www.linkedin.com/in/oualidba/', label: 'LinkedIn' },
+    { icon: Instagram, href: 'https://www.instagram.com/___o_u_a_l_i_d___/', label: 'Instagram' }
   ];
 
   return (
