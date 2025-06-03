@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, Github, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import UserMenu from './UserMenu';
@@ -13,13 +14,6 @@ const LandingNavigation = () => {
     { name: 'Features', href: '#features' },
     { name: 'Examples', href: '/vault' },
     { name: 'Pricing', href: '#pricing' }
-  ];
-
-  const socialLinks = [
-    { icon: Github, href: 'https://github.com/Oualidl290/', label: 'GitHub' },
-    { icon: Twitter, href: 'https://x.com/Empty_Thron', label: 'X (Twitter)' },
-    { icon: Linkedin, href: 'https://www.linkedin.com/in/oualidba/', label: 'LinkedIn' },
-    { icon: Instagram, href: 'https://www.instagram.com/___o_u_a_l_i_d___/', label: 'Instagram' }
   ];
 
   return (
@@ -45,20 +39,6 @@ const LandingNavigation = () => {
                 {item.name}
               </Link>
             ))}
-            <div className="flex items-center space-x-4 ml-8">
-              {socialLinks.map(({ icon: Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors duration-200"
-                  aria-label={label}
-                >
-                  <Icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Desktop Actions */}
@@ -114,21 +94,6 @@ const LandingNavigation = () => {
                   {item.name}
                 </Link>
               ))}
-              
-              <div className="flex items-center space-x-6 pt-4">
-                {socialLinks.map(({ icon: Icon, href, label }) => (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors duration-200"
-                    aria-label={label}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </a>
-                ))}
-              </div>
               
               <div className="pt-4 border-t border-slate-200/20 dark:border-slate-800/20">
                 {user ? (
