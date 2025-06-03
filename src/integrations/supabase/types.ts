@@ -58,6 +58,7 @@ export type Database = {
           emoji: string | null
           excerpt: string
           id: string
+          is_public: boolean
           tags: string[] | null
           title: string
           updated_at: string
@@ -69,6 +70,7 @@ export type Database = {
           emoji?: string | null
           excerpt: string
           id?: string
+          is_public?: boolean
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -80,6 +82,7 @@ export type Database = {
           emoji?: string | null
           excerpt?: string
           id?: string
+          is_public?: boolean
           tags?: string[] | null
           title?: string
           updated_at?: string

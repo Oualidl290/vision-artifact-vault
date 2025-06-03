@@ -13,6 +13,7 @@ interface Prompt {
   id: string;
   title: string;
   content: string;
+  excerpt: string;
   tags: string[];
   is_public: boolean;
   created_at: string;
@@ -193,16 +194,16 @@ const MyPrompts = () => {
                     </CardTitle>
                     <div className="flex items-center space-x-1 ml-2">
                       {prompt.is_public ? (
-                        <Globe className="w-4 h-4 text-green-500" title="Public" />
+                        <Globe className="w-4 h-4 text-green-500" />
                       ) : (
-                        <Lock className="w-4 h-4 text-slate-400" title="Private" />
+                        <Lock className="w-4 h-4 text-slate-400" />
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-slate-600 text-sm line-clamp-3">
-                    {prompt.content}
+                    {prompt.excerpt || prompt.content}
                   </p>
                   
                   {prompt.tags.length > 0 && (

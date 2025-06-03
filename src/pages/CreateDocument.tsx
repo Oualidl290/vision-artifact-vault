@@ -50,6 +50,7 @@ const CreateDocument = () => {
         .insert({
           title: title.trim(),
           content: content.trim(),
+          excerpt: content.trim().substring(0, 150) + (content.trim().length > 150 ? '...' : ''),
           tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
           is_public: isPublic,
           user_id: user.id,

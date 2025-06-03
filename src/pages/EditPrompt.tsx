@@ -14,6 +14,7 @@ interface Prompt {
   id: string;
   title: string;
   content: string;
+  excerpt: string;
   tags: string[];
   is_public: boolean;
   user_id: string;
@@ -106,6 +107,7 @@ const EditPrompt = () => {
         .update({
           title: title.trim(),
           content: content.trim(),
+          excerpt: content.trim().substring(0, 150) + (content.trim().length > 150 ? '...' : ''),
           tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
           is_public: isPublic,
           updated_at: new Date().toISOString(),
